@@ -133,10 +133,9 @@ def open_dashboard():
                                  (received_user[("username")], title_entry.get()))
                     con.commit()
                     con.close()
-                    messagebox.showinfo("Success!", "The book was borrowed! Now you can close this page.")
                 except Exception as es:
                     messagebox.showerror("Error!", f"Error due to: {str(es)}")
-
+                messagebox.showinfo("Success!", "The book was borrowed! Now you can close this page.")
         # Add enter button
         enter_button = Button(borrow, text="Submit", activebackground="#5c739d", activeforeground="white", fg="#5c739d",
                               bg="#E7F2F8", font=("Britannic Bold", 11), command=lambda: borrow_book())
@@ -205,6 +204,9 @@ def open_dashboard():
                               fg="#5c739d", bg="#E7F2F8", font=("Britannic Bold", 11), command=lambda: return_books())
         return_book_canvas.create_window(490, 290, window=enter_button)
 
+
+
+
     # Add borrow button
     borrow_books_button = Button(dashboard, text="Borrow books", activebackground="#5c739d", activeforeground="white",
                                  fg="#5c739d", bg="#E7F2F8", font=("Britannic Bold", 11), command=open_borrow)
@@ -214,6 +216,64 @@ def open_dashboard():
     return_books_button = Button(dashboard, text="Return books", activebackground="#5c739d", activeforeground="white",
                                  fg="#5c739d", bg="#E7F2F8", font=("Britannic Bold", 11), command=open_return)
     dashboard_canvas.create_window(590, 260, window=return_books_button)
+
+    def open_view_books():
+        view = Toplevel()
+        view.title("Books")
+        view.iconbitmap("C:/Users/tpodi/Downloads/books.ico")
+        view.geometry("1038x576")
+        view.resizable(False, False)
+
+        # Creating the Frame
+        m_frame = Frame(view, bd=10, width=1038, height=576, relief=RIDGE, bg='white')
+        m_frame.grid()
+
+        # Creating the TreeView with books
+        scroll_y = Scrollbar(m_frame, orient=VERTICAL)
+        book_records = ttk.Treeview(m_frame, height=26, columns=("idbooks", "name", "borrow"))
+        scroll_y.pack(side=RIGHT, fill=Y)
+
+        book_records.heading("idbooks", text="BOOK ID")
+        book_records.heading("name", text="TITLE")
+        book_records.heading("borrow", text="BORROWED")
+        book_records['show'] = 'headings'
+
+        book_records.column("idbooks", width=150)
+        book_records.column("name",  width=300)
+        book_records.column("borrow",  width=150)
+
+        book_records.pack(fill=BOTH, expand=1)
+        # Adding the database for display
+        con = pymysql.connect(host="localhost",
+                              user="root",
+                              password="root",
+                              database="librarydb",
+                              charset='utf8mb4',
+                              cursorclass=pymysql.cursors.DictCursor
+                              )
+        curs = con.cursor()
+        curs.execute('Select idbooks, name, borrowed from books')
+        received_books = curs.fetchone()
+
+        if len(received_books) != 0:
+            book_records.delete(*book_records.get_children())
+            list =[(k,v) for k,v in received_books.items()]
+            print(type(received_books))
+            print(list)
+
+            for row in list:
+                print(row)
+                book_records.insert('', END, values=row)
+        else:
+            messagebox.showwarning("Warning", "There are no books available!")
+        con.commit()
+        con.close()
+
+
+    # Add view books button
+    view_books_button = Button(dashboard, text="View books", activebackground="#5c739d", activeforeground="white",
+                                 fg="#5c739d", bg="#E7F2F8", font=("Britannic Bold", 11), command=open_view_books)
+    dashboard_canvas.create_window(590, 320, window=view_books_button)
 
 
 def open_register():
@@ -391,7 +451,7 @@ def open_administrative():
     ISBN_entry = tkinter.Entry(admin_canvas)
     admin_canvas.create_window(400, 280, window=ISBN_entry)
 
-    # Creating database register
+    # Creating database for adding a new book
     def add_new_book():
         if id_entry.get() == "" or title_entry.get() == "" or author_entry.get() == "" or year_entry.get() == "" or borrowed_entry.get() == "" or ISBN_entry.get() == "":
             messagebox.showwarning("Warning", "All the fields are required!")
