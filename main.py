@@ -39,11 +39,6 @@ role_entry = ttk.Combobox(root, value=options, width=17)
 bg_canvas.create_window(210, 290, window=role_entry)
 
 
-# role_entry = tkinter.Entry(root)
-# role_entry.insert(0, "client/admin")
-# bg_canvas.create_window(210, 330, window=role_entry)
-
-
 def open_dashboard():
     global dashboard_bg, dashboard
     dashboard = Toplevel()
@@ -83,24 +78,9 @@ def open_dashboard():
         # Set the background image in canvas
         borrow_canvas.create_image(0, 0, image=borrow_bg, anchor="nw")
 
-        # Add available books table
-        ##########################!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
         # Add enter title entry
         title_entry = Entry(borrow)
         borrow_canvas.create_window(490, 250, window=title_entry)
-
-        # con = pymysql.connect(host="localhost",
-        #                       user="root",
-        #                       password="root",
-        #                       database="librarydb",
-        #                       charset='utf8mb4',
-        #                       cursorclass=pymysql.cursors.DictCursor
-        #                       )
-        # curs = con.cursor()
-        # curs.execute('Select id and name and borrowed from books')
-        # row = curs.fetchone()
 
         def borrow_book():
             con = pymysql.connect(host="localhost",
@@ -136,6 +116,7 @@ def open_dashboard():
                 except Exception as es:
                     messagebox.showerror("Error!", f"Error due to: {str(es)}")
                 messagebox.showinfo("Success!", "The book was borrowed! Now you can close this page.")
+
         # Add enter button
         enter_button = Button(borrow, text="Submit", activebackground="#5c739d", activeforeground="white", fg="#5c739d",
                               bg="#E7F2F8", font=("Britannic Bold", 11), command=lambda: borrow_book())
@@ -190,12 +171,22 @@ def open_dashboard():
                                           cursorclass=pymysql.cursors.DictCursor
                                           )
                     curs = con.cursor()
+                    curs.execute("Select borrowed from books")
+                    carti_imprumutate = curs.fetchone()
+                    i=0
+                    while carti_imprumutate is None or carti_imprumutate[("borrowed")] != received_user[("username")]:
+                        carti_imprumutate = curs.fetchone()
 
-                    curs.execute("UPDATE books SET borrowed = \"No\"WHERE name=%s and borrowed = %s",
-                                 (title_entry.get(), received_user[("username")]))
-                    con.commit()
-                    con.close()
-                    messagebox.showinfo("Success!", "The book was returned! Now you can close this page.")
+                    if carti_imprumutate[("borrowed")] != received_user[("username")]:
+                        messagebox.showwarning("Warning!", "You can't return someone else's book")
+
+                    else:
+                        curs.execute("UPDATE books SET borrowed = \"No\"WHERE name=%s and borrowed = %s",
+                                     (title_entry.get(), received_user[("username")]))
+                        con.commit()
+                        con.close()
+
+                        messagebox.showinfo("Success!", "The book was returned! Now you can close this page.")
                 except Exception as es:
                     messagebox.showerror("Error!", f"Error due to: {str(es)}")
 
@@ -203,9 +194,6 @@ def open_dashboard():
         enter_button = Button(return_book, text="Submit", activebackground="#5c739d", activeforeground="white",
                               fg="#5c739d", bg="#E7F2F8", font=("Britannic Bold", 11), command=lambda: return_books())
         return_book_canvas.create_window(490, 290, window=enter_button)
-
-
-
 
     # Add borrow button
     borrow_books_button = Button(dashboard, text="Borrow books", activebackground="#5c739d", activeforeground="white",
@@ -221,7 +209,6 @@ def open_dashboard():
         view = Toplevel()
         view.title("Books")
         view.iconbitmap("C:/Users/tpodi/Downloads/books.ico")
-        view.geometry("1038x576")
         view.resizable(False, False)
 
         # Creating the Frame
@@ -239,8 +226,8 @@ def open_dashboard():
         book_records['show'] = 'headings'
 
         book_records.column("idbooks", width=150)
-        book_records.column("name",  width=300)
-        book_records.column("borrow",  width=150)
+        book_records.column("name", width=300)
+        book_records.column("borrow", width=150)
 
         book_records.pack(fill=BOTH, expand=1)
         # Adding the database for display
@@ -254,25 +241,26 @@ def open_dashboard():
         curs = con.cursor()
         curs.execute('Select idbooks, name, borrowed from books')
         received_books = curs.fetchone()
+        book_records.delete(*book_records.get_children())
 
-        if len(received_books) != 0:
-            book_records.delete(*book_records.get_children())
-            list =[(k,v) for k,v in received_books.items()]
-            print(type(received_books))
-            print(list)
+        if received_books is None:
+            messagebox.showerror("Error! There are no books")
 
-            for row in list:
-                print(row)
-                book_records.insert('', END, values=row)
-        else:
-            messagebox.showwarning("Warning", "There are no books available!")
+        while received_books is not None:
+            print(received_books)
+            book = (
+                received_books["idbooks"],
+                received_books["name"],
+                received_books["borrowed"],
+            )
+            book_records.insert('', END, values=book)
+            received_books = curs.fetchone()
         con.commit()
         con.close()
 
-
     # Add view books button
     view_books_button = Button(dashboard, text="View books", activebackground="#5c739d", activeforeground="white",
-                                 fg="#5c739d", bg="#E7F2F8", font=("Britannic Bold", 11), command=open_view_books)
+                               fg="#5c739d", bg="#E7F2F8", font=("Britannic Bold", 11), command=open_view_books)
     dashboard_canvas.create_window(590, 320, window=view_books_button)
 
 
@@ -331,7 +319,7 @@ def open_register():
             messagebox.showwarning("Warning", "All the fields except secret code are required!")
         if role_entry2.get() == "client" and secret_code_entry.get() != "":
             messagebox.showwarning("Warning", "Secret code is only for the admins")
-        if role_entry2.get() == "admin" and secret_code_entry.get()!="IPSNAFNB":
+        if role_entry2.get() == "admin" and secret_code_entry.get() != "IPSNAFNB":
             messagebox.showwarning("Warning", "Wrong code!")
             con = pymysql.connect(host="localhost",
                                   user="root",
